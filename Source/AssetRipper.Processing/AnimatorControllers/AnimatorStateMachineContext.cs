@@ -91,8 +91,9 @@ internal sealed class AnimatorStateMachineContext
 			{
 				// Only child StateMachines (and child States) have access to their parent StateMachine ExitState
 				// Try use this to find the true parents for some Unknown-FullPath StateMachines
-				LocateUnknownStateMachinesWithExitStateTransition(); // solve more FullPaths; may leave some StateMachines "flagged"
+				// Solve more FullPaths; may leave some StateMachines "flagged"
 				// Flagged StateMachines have a set parent, but that parent is Unknown-FullPath, so the Flagged StateMachine can't solve its FullPath yet
+				LocateUnknownStateMachinesWithExitStateTransition();
 
 				if (UnknownFullPaths != 0)
 				{
@@ -103,9 +104,9 @@ internal sealed class AnimatorStateMachineContext
 			}
 
 			AssignStateMachineChildStates(); // assign child States to StateMachines and Create State Transitions
-			
+
 			CreateAnyStateTransitions(); // create AnyState Transitions for Root StateMachine
-			
+
 			if (UnknownFullPaths != 0)
 			{
 				// All State Transitions have been used for assigning possible StateMachine parents (parents only with FullPaths)
@@ -180,7 +181,7 @@ internal sealed class AnimatorStateMachineContext
 			ExtraStateMachine = VirtualAnimationFactory.CreateStateMachine(VirtualFile, Controller, LayerIndex);
 			ExtraStateMachine.Name = "Extra StateMachine";
 			StateContext.AddStateMachineFullPath($"{RootStateMachine.Name}.{ExtraStateMachine.Name}", 0); // this will link all Unknowns without possible parent to ExtraStateMachine
-			
+
 			// give ExtraStateMachine a (Default) State to turn it into a FullPath StateMachine, in case of "re-ripping" this Animator Controller
 			IAnimatorState ExtraState = VirtualAnimationFactory.CreateDefaultAnimatorState(VirtualFile);
 			ChildAnimatorState childState = ExtraStateMachine.ChildStates!.AddNew();
@@ -241,7 +242,7 @@ internal sealed class AnimatorStateMachineContext
 		{
 			// Unity 5+
 
-			int stateMachineCount =  StateMachineConstant.StateMachineCount();
+			int stateMachineCount = StateMachineConstant.StateMachineCount();
 			IndexedStateMachines = new StateMachineData[stateMachineCount];
 
 			// assuming SelectorStateConstantArray follows the sequence: [Entry1, Exit1, Entry2, Exit2, ...]
@@ -317,7 +318,7 @@ internal sealed class AnimatorStateMachineContext
 				mainStateMachine.SetChildStateMachineCapacity(IndexedStateMachines.Length - 1);
 
 				// ensure Root StateMachine will be at index 0
-				IndexedStateMachines[0] = new (mainStateMachine);
+				IndexedStateMachines[0] = new(mainStateMachine);
 				// initialize the rest of StateMachines
 				int j = 1;
 				foreach (string stateMachineName in StateContext.GetUniqueStateMachinePaths())
@@ -410,14 +411,14 @@ internal sealed class AnimatorStateMachineContext
 
 		if (stateDestination != null) // destination is State
 		{
-			animatorStateTransition.DstStateP = stateDestination;
+			animatorStateTransition.DestinationStateP = stateDestination;
 		}
 		else if (IsUnity5 && stateMachineDestinationIndex != -1) // destination is StateMachine
 		{
 			IAnimatorStateMachine stateMachineDestination = IndexedStateMachines[stateMachineDestinationIndex].StateMachine;
 			if (isEntryDestination)
 			{
-				animatorStateTransition.DstStateMachineP = stateMachineDestination;
+				animatorStateTransition.DestinationStateMachineP = stateMachineDestination;
 
 				if (stateMachineDestination.Name.IsEmpty || stateMachineDestination.Name == StateMachineFlagName) // try locate StateMachine with Unknown FullPath
 				{
@@ -517,7 +518,7 @@ internal sealed class AnimatorStateMachineContext
 	{
 		if (!StateContext.HasStates())
 			return;
-		
+
 		foreach (StateMachineData stateMachineData in IndexedStateMachines)
 		{
 			if (StateContext.TryGetStateMachinePath(stateMachineData.FullPathID, out string stateMachineFullPath))
@@ -730,14 +731,14 @@ internal sealed class AnimatorStateMachineContext
 
 		if (stateDestination != null)
 		{
-			animatorTransition.DstStateP = stateDestination;
+			animatorTransition.DestinationStateP = stateDestination;
 		}
 		else if (IsUnity5 && stateMachineDestinationIndex != -1)
 		{
 			if (isEntryDestination)
 			{
 				IAnimatorStateMachine stateMachineDestination = IndexedStateMachines[stateMachineDestinationIndex].StateMachine;
-				animatorTransition.DstStateMachineP = stateMachineDestination;
+				animatorTransition.DestinationStateMachineP = stateMachineDestination;
 			}
 			else
 			{
@@ -1041,7 +1042,7 @@ internal sealed class AnimatorStateMachineContext
 					{
 						if (stateMachineDestination.Name != StateMachineFlagName)
 							continue; // don't try to restrict a FullPath StateMachine!
-						
+
 						// Flagged StateMachine has a set parent already, but that parent is Unknown-FullPath, so transfer the restrictions to parent
 						stateMachineDestinationIndex = GetUnknownParentForFlaggedStateMachine(stateMachineDestinationIndex);
 					}
@@ -1080,10 +1081,10 @@ internal sealed class AnimatorStateMachineContext
 			{
 				string[] temp = pr.NotUnder.Where(fullPath => pr.NotUnder.All(otherFullPath => fullPath == otherFullPath || !fullPath.StartsWith(otherFullPath))).ToArray();
 				pr.NotUnder.Clear();
-				pr.NotUnder.AddRange(temp); 
+				pr.NotUnder.AddRange(temp);
 			}
 
-			for (int i = pr.NoDirect.Count-1; i >= 0; i--) // remove StateMachine FullPaths from NoDirect when contained in NotUnder 
+			for (int i = pr.NoDirect.Count - 1; i >= 0; i--) // remove StateMachine FullPaths from NoDirect when contained in NotUnder 
 			{
 				if (StateContext.TryGetStateMachinePath(pr.NoDirect[i], out string fullPath)) // always true, getting fullPath here
 				{
@@ -1106,7 +1107,7 @@ internal sealed class AnimatorStateMachineContext
 
 	private static string GetReversedFullPath(string parentFullPath, uint fullPathID)
 	{
-		return Crc32Algorithm.ReverseAscii(fullPathID, $"{parentFullPath}.EMPTY_");
+		return Crc32Algorithm.ReverseUTF8(fullPathID, $"{parentFullPath}.EMPTY_");
 	}
 
 	/// <summary>
